@@ -143,10 +143,10 @@ plain_init(const char *pass, const char *key, const char *method)
 	cipher_t* cipher = (cipher_t*)ss_malloc(sizeof(cipher_t));
 	memset(cipher, 0, sizeof(cipher_t));
 	if( key != NULL ){
-		cipher->key_len = min(strlen(key), MAX_KEY_LENGTH);
+		cipher->key_len = min(strlen(key), MAX_KEY_LENGTH-1);
 		memcpy(cipher->key, key, cipher->key_len); 
 	} else if( pass !=NULL ){
-		cipher->key_len = min(strlen(pass), MAX_KEY_LENGTH);
+		cipher->key_len = min(strlen(pass), MAX_KEY_LENGTH-1);
 		memcpy(cipher->key, pass, cipher->key_len);
 	}
 	if( cipher->key_len==0 ){
