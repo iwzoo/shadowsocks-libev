@@ -211,7 +211,7 @@ crypto_init(const char *password, const char *key, const char *method)
                 .ctx_init    = &plain_ctx_init,
                 .ctx_release = &plain_ctx_release,
             };
-            memcpy(&crypto, &tmp, sizeof(crypto_t));
+            memcpy(crypto, &tmp, sizeof(crypto_t));
             return crypto;
         }
     }
