@@ -136,19 +136,25 @@ plain_ctx_release(cipher_ctx_t* cipher_ctx)
 cipher_t *
 plain_init(const char *pass, const char *key, const char *method)
 {
+	LOGI("initialzing plain...");
 	if( strcmp(method, PLAIN) ){
 		LOGE("unknown encrypt method: %s", method);
 		return NULL;
 	}
+	LOGI("allocating cipher object...");
 	cipher_t* cipher = (cipher_t*)ss_malloc(sizeof(cipher_t));
 	memset(cipher, 0, sizeof(cipher_t));
+	LOGI("cipher object created!");
 	if( key != NULL ){
+		LOGI("constructing key as cipher key...");
 		cipher->key_len = min(strlen(key), MAX_KEY_LENGTH-1);
 		memcpy(cipher->key, key, cipher->key_len); 
 	} else if( pass !=NULL ){
+		LOGI("constructing password as cipher key...");
 		cipher->key_len = min(strlen(pass), MAX_KEY_LENGTH-1);
 		memcpy(cipher->key, pass, cipher->key_len);
 	}
+	LOGI("cipher object created");
 	if( cipher->key_len==0 ){
 		FATAL("Key or password must be specified");
 	}
