@@ -10,10 +10,19 @@
 
 #define PLAIN "plain"
 
+void
+dump0(char *tag, char *text, int len)
+{
+    int i;
+    printf("%s: ", tag);
+    for (i = 0; i < len; i++)
+        printf("0x%02x ", (uint8_t)text[i]);
+    printf("\n");
+}
+
 int
 plain_encrypt_all(buffer_t *plaintext, cipher_t *cipher, size_t capacity)
 {
-	LOGI("plain encrypting all...");
 	cipher_ctx_t cipher_ctx;
 	plain_ctx_init(cipher, &cipher_ctx, 1);
 
@@ -28,19 +37,22 @@ plain_encrypt_all(buffer_t *plaintext, cipher_t *cipher, size_t capacity)
 
 	brealloc(plaintext, ciphertext->len, capacity);
 	memcpy(plaintext->data, ciphertext->data, ciphertext->len);
+	plaintext->len = ciphertext->len;
 
 	plain_ctx_release(&cipher_ctx);
 
-	LOGI("plain encrypted all!");
 	return CRYPTO_OK;	
 }
 
 int
 plain_encrypt(buffer_t *plaintext, cipher_ctx_t *cipher_ctx, size_t capacity)
 {
-	LOGI("plain encrypting...");
+
 	if( cipher_ctx==NULL )
 		return CRYPTO_ERROR;
+
+	if( cipher_ctx->init==1 ) return CRYPTO_OK;
+	cipher_ctx->init = 1;
 	cipher_t * cipher = cipher_ctx->cipher;
 
 	static buffer_t tmp = {0, 0, 0, NULL };
@@ -53,15 +65,15 @@ plain_encrypt(buffer_t *plaintext, cipher_ctx_t *cipher_ctx, size_t capacity)
 
 	brealloc(plaintext, ciphertext->len, capacity);
 	memcpy(plaintext->data, ciphertext->data, ciphertext->len);
+	plaintext->len = ciphertext->len;
 
-	LOGI("plain encrypted!");
+
 	return CRYPTO_OK;
 }
 
 int
 plain_decrypt_all(buffer_t *ciphertext, cipher_t *cipher, size_t capacity)
 {
-	LOGI("plain dencrypting all...");
 	size_t key_len = cipher->key_len + sizeof(cipher->key_len);
 	if( ciphertext->len <= key_len ){
 		return CRYPTO_ERROR;
@@ -77,7 +89,9 @@ plain_decrypt_all(buffer_t *ciphertext, cipher_t *cipher, size_t capacity)
 	size_t* key_len_data = (size_t*)ciphertext->data;
 	uint8_t* key = (uint8_t*)(ciphertext->data + sizeof(cipher->key_len));
 	if( *key_len_data != cipher->key_len || memcmp(key, cipher->key, *key_len_data) ){
-		LOGE("crypto: plain: unknown ciphertext");
+
+		LOGE("crypto-a: plain-a: unknown ciphertext");
+		LOGI("key length: %d\t cipher key length: %d", (int)*key_len_data, (int)cipher->key_len);
 		// release cipher_ctx??
 		return CRYPTO_ERROR;
 	}
@@ -86,26 +100,27 @@ plain_decrypt_all(buffer_t *ciphertext, cipher_t *cipher, size_t capacity)
 	memcpy(plaintext->data, ciphertext->data + key_len, ciphertext->len - key_len );
 	
 	brealloc(ciphertext, plaintext->len , capacity);
-	memcpy(ciphertext->data, plaintext->data, plaintext->len - key_len );
-	ciphertext->len = plaintext->len - key_len;
+	memcpy(ciphertext->data, plaintext->data, plaintext->len  );
+	ciphertext->len = plaintext->len;
 
-	LOGI("plain dencrypted!");
 	return CRYPTO_OK;
 }
 
 int
 plain_decrypt(buffer_t *ciphertext, cipher_ctx_t *cipher_ctx, size_t capacity)
 {
-	LOGI("plain dencrypting...");
 	if( cipher_ctx==NULL ) 
 		return CRYPTO_ERROR;
+	if( cipher_ctx->init==1 ) return CRYPTO_OK;
+	cipher_ctx->init = 1;
+
 	cipher_t* cipher = cipher_ctx->cipher;
 
 	size_t key_len = cipher->key_len + sizeof(cipher->key_len);
 	if( ciphertext->len <= key_len ){
+		LOGI("cipher length: %ld", ciphertext->len);
 		return CRYPTO_ERROR;
 	}
-	
 	static buffer_t tmp = {0, 0, 0, NULL};
 	brealloc(&tmp, ciphertext->len, capacity);
 	buffer_t* plaintext = &tmp;
@@ -115,46 +130,47 @@ plain_decrypt(buffer_t *ciphertext, cipher_ctx_t *cipher_ctx, size_t capacity)
 	uint8_t* key = (uint8_t*)(ciphertext->data + sizeof(cipher->key_len));
 	if( *key_len_data != cipher->key_len || memcmp(key, cipher->key, *key_len_data) ){
 		LOGE("crypto: plain: unknown ciphertext");
+		LOGI("key length: %d\t cipher key length: %d", (int)*key_len_data, (int)cipher->key_len);
+		LOGI("key: %s\t read key: %s#", (const char*)cipher->key, (const char*)key );
+		dump0("plain", ciphertext->data, ciphertext->len);
 		// release cipher_ctx??
 		return CRYPTO_ERROR;
 	}
-
 	memcpy(plaintext->data, ciphertext->data + key_len, ciphertext->len - key_len );
 	
 	brealloc(ciphertext, plaintext->len , capacity);
-	memcpy(ciphertext->data, plaintext->data, plaintext->len - key_len );
-	ciphertext->len = plaintext->len - key_len;
+	memcpy(ciphertext->data, plaintext->data, plaintext->len );
+	ciphertext->len = plaintext->len ;
+	
 
-	LOGI("plain dencrypted!");
 	return CRYPTO_OK;
 }
 
 void
 plain_ctx_init(cipher_t *cipher, cipher_ctx_t *cipher_ctx, int enc)
 {
-	LOGI("plain initilizing-----");
 	cipher_ctx->cipher = cipher;
-	LOGI("plain initilized!");
+	cipher_ctx->init = 1;
+	if( enc ){
+		rand_bytes(cipher_ctx->nonce, cipher->nonce_len);
+	}
 }
 
 void
 plain_ctx_release(cipher_ctx_t* cipher_ctx)
 {
-
+	cipher_ctx->init = 0;
 }
 
 cipher_t *
 plain_init(const char *pass, const char *key, const char *method)
 {
-	LOGI("initialzing plain...");
 	if( strcmp(method, PLAIN) ){
 		LOGE("unknown encrypt method: %s", method);
 		return NULL;
 	}
-	LOGI("allocating cipher object...");
 	cipher_t* cipher = (cipher_t*)ss_malloc(sizeof(cipher_t));
 	memset(cipher, 0, sizeof(cipher_t));
-	LOGI("cipher object created!");
 	if( key != NULL ){
 		LOGI("constructing key as cipher key...");
 		cipher->key_len = min(strlen(key), MAX_KEY_LENGTH-1);
@@ -164,7 +180,6 @@ plain_init(const char *pass, const char *key, const char *method)
 		cipher->key_len = min(strlen(pass), MAX_KEY_LENGTH-1);
 		memcpy(cipher->key, pass, cipher->key_len);
 	}
-	LOGI("cipher object created");
 	if( cipher->key_len==0 ){
 		FATAL("Key or password must be specified");
 	}
