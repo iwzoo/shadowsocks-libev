@@ -13,6 +13,7 @@
 int
 plain_encrypt_all(buffer_t *plaintext, cipher_t *cipher, size_t capacity)
 {
+	LOGI("plain encrypting all...");
 	cipher_ctx_t cipher_ctx;
 	plain_ctx_init(cipher, &cipher_ctx, 1);
 
@@ -30,12 +31,14 @@ plain_encrypt_all(buffer_t *plaintext, cipher_t *cipher, size_t capacity)
 
 	plain_ctx_release(&cipher_ctx);
 
+	LOGI("plain encrypted all!");
 	return CRYPTO_OK;	
 }
 
 int
 plain_encrypt(buffer_t *plaintext, cipher_ctx_t *cipher_ctx, size_t capacity)
 {
+	LOGI("plain encrypting...");
 	if( cipher_ctx==NULL )
 		return CRYPTO_ERROR;
 	cipher_t * cipher = cipher_ctx->cipher;
@@ -51,12 +54,14 @@ plain_encrypt(buffer_t *plaintext, cipher_ctx_t *cipher_ctx, size_t capacity)
 	brealloc(plaintext, ciphertext->len, capacity);
 	memcpy(plaintext->data, ciphertext->data, ciphertext->len);
 
+	LOGI("plain encrypted!");
 	return CRYPTO_OK;
 }
 
 int
 plain_decrypt_all(buffer_t *ciphertext, cipher_t *cipher, size_t capacity)
 {
+	LOGI("plain dencrypting all...");
 	size_t key_len = cipher->key_len + sizeof(cipher->key_len);
 	if( ciphertext->len <= key_len ){
 		return CRYPTO_ERROR;
@@ -84,12 +89,14 @@ plain_decrypt_all(buffer_t *ciphertext, cipher_t *cipher, size_t capacity)
 	memcpy(ciphertext->data, plaintext->data, plaintext->len - key_len );
 	ciphertext->len = plaintext->len - key_len;
 
+	LOGI("plain dencrypted!");
 	return CRYPTO_OK;
 }
 
 int
 plain_decrypt(buffer_t *ciphertext, cipher_ctx_t *cipher_ctx, size_t capacity)
 {
+	LOGI("plain dencrypting...");
 	if( cipher_ctx==NULL ) 
 		return CRYPTO_ERROR;
 	cipher_t* cipher = cipher_ctx->cipher;
@@ -118,13 +125,16 @@ plain_decrypt(buffer_t *ciphertext, cipher_ctx_t *cipher_ctx, size_t capacity)
 	memcpy(ciphertext->data, plaintext->data, plaintext->len - key_len );
 	ciphertext->len = plaintext->len - key_len;
 
+	LOGI("plain dencrypted!");
 	return CRYPTO_OK;
 }
 
 void
 plain_ctx_init(cipher_t *cipher, cipher_ctx_t *cipher_ctx, int enc)
 {
+	LOGI("plain initilizing-----");
 	cipher_ctx->cipher = cipher;
+	LOGI("plain initilized!");
 }
 
 void
